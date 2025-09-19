@@ -21,7 +21,9 @@ def get_app_description() -> str:
     """
     return (
         "WeatherWise Events API provides endpoints to manage event planning, "
-        "retrieve weather-informed recommendations, and serve current/forecast "
-        "weather data. This foundation is prepared for plugging in real weather "
-        "providers, scoring logic, and notification services."
+        "retrieve weather-informed recommendations (including scoring endpoints), "
+        "and serve current/forecast weather data. The API includes detailed schemas "
+        "for events, scoring, weather, and email-notification stubs to demonstrate "
+        "end-to-end flows. All endpoints are documented with summaries and "
+        "descriptions, grouped under Health, Events, and Weather tags."
     )

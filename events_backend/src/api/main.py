@@ -12,6 +12,16 @@ def create_app() -> FastAPI:
     """
     Factory to create and configure the FastAPI application.
     Loads settings, configures CORS, routers, and OpenAPI metadata.
+
+    OpenAPI/Docs:
+    - Title, description, version, tags are set for rich documentation.
+    - Routers are registered with explicit prefixes and tags so that the schema
+      includes: Health, Events (create/list/get/recommendations/score),
+      Weather (search/current/forecast).
+
+    CORS:
+    - Allows the configured origins in .env (CORS_ALLOW_ORIGINS), and always includes
+      http://localhost:3000 to enable local frontend development.
     """
     settings = get_settings()
 
@@ -29,9 +39,14 @@ def create_app() -> FastAPI:
         },
     )
 
+    # Ensure localhost:3000 is allowed for frontend development
+    configured_origins = [o.strip() for o in (settings.CORS_ALLOW_ORIGINS or []) if o.strip()]
+    if "http://localhost:3000" not in configured_origins and "*" not in configured_origins:
+        configured_origins.append("http://localhost:3000")
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.CORS_ALLOW_ORIGINS,
+        allow_origins=configured_origins if configured_origins else ["*"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
