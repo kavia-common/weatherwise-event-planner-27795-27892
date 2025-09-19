@@ -9,7 +9,7 @@ openapi_tags = [
     },
     {
         "name": "Weather",
-        "description": "Weather snapshot and forecast endpoints (stubbed).",
+        "description": "Live weather snapshot and forecast via Open-Meteo and location search via Nominatim.",
     },
 ]
 
