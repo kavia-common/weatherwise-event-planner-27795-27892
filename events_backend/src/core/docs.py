@@ -5,7 +5,7 @@ openapi_tags = [
     },
     {
         "name": "Events",
-        "description": "Submit, list, and manage event plans and recommendations.",
+        "description": "Submit, list, and manage event plans; score suitability; generate recommendations.",
     },
     {
         "name": "Weather",

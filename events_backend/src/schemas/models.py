@@ -78,3 +78,41 @@ class RecommendationResponse(BaseModel):
     options: List[ScoredOption] = Field(..., description="Ranked options with scores")
     generated_at: datetime = Field(..., description="Recommendation generation time")
     notes: Optional[str] = Field(None, description="General notes for the recommendation")
+
+
+# --- Request/Response models for scoring endpoints ---
+
+class ScoreRequest(BaseModel):
+    """
+    PUBLIC_INTERFACE
+    Request body to score forecast items for a specific day and location.
+    """
+    location: str = Field(..., description="Location or city used to obtain weather data")
+    target_date: date = Field(..., description="Day for which to evaluate time windows")
+    hours: int = Field(24, ge=1, le=168, description="Forecast lookahead hours")
+    step_hours: int = Field(3, ge=1, le=24, description="Forecast sampling step in hours")
+    window_hours: int = Field(3, ge=1, le=12, description="Time window span used for scoring")
+
+
+class ScoreResponse(BaseModel):
+    """
+    PUBLIC_INTERFACE
+    Response for POST /events/score containing scored windows and metadata.
+    """
+    options: List[ScoredOption] = Field(..., description="Scored time windows sorted by score desc")
+    generated_at: datetime = Field(..., description="UTC generation timestamp")
+    notes: Optional[str] = Field(None, description="Notes about scoring method and parameters")
+
+
+class RecommendationRequest(BaseModel):
+    """
+    PUBLIC_INTERFACE
+    Request body to generate recommendations for a new ad-hoc event.
+    """
+    name: str = Field(..., description="Event name")
+    email: EmailStr = Field(..., description="Requester email")
+    date: date = Field(..., description="Preferred date")
+    location: str = Field(..., description="Location or city for the event")
+    hours: int = Field(48, ge=1, le=168, description="Forecast horizon in hours")
+    step_hours: int = Field(3, ge=1, le=24, description="Forecast sampling step in hours")
+    window_hours: int = Field(3, ge=1, le=12, description="Time window span used for scoring")

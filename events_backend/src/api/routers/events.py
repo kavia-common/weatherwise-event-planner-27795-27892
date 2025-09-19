@@ -5,7 +5,17 @@ from fastapi import APIRouter, Depends, HTTPException, Path, status
 
 from src.api.deps import get_events_repo
 from src.data.events_repository import InMemoryEventsRepository
-from src.schemas.models import EventRequest, EventResponse, RecommendationResponse, ScoredOption
+from src.schemas.models import (
+    EventRequest,
+    EventResponse,
+    RecommendationRequest,
+    RecommendationResponse,
+    ScoreRequest,
+    ScoreResponse,
+    ScoredOption,
+)
+from src.services.scoring import build_time_windows_for_day, score_windows_from_forecast
+from src.services.weather_client import GeoError, WeatherProviderError, nominatim_client, openmeteo_client
 
 router = APIRouter()
 
@@ -101,4 +111,89 @@ def get_recommendations(
         options=options,
         generated_at=datetime.utcnow(),
         notes="Scores are illustrative placeholders. Real scoring to be integrated.",
+    )
+
+
+@router.post(
+    "/score",
+    response_model=ScoreResponse,
+    summary="Score weather suitability for a date",
+    description=(
+        "Scores suitability of time windows for a given target date and location using forecast from Open-Meteo. "
+        "It builds several windows across the day and averages scores of forecast points within each window."
+    ),
+    operation_id="score_event_date",
+)
+async def score_event_date(payload: ScoreRequest) -> ScoreResponse:
+    """
+    PUBLIC_INTERFACE
+    Score time windows for the provided location and date.
+
+    Parameters:
+        payload: ScoreRequest with location, target_date, forecast parameters and window size.
+
+    Returns:
+        ScoreResponse with sorted ScoredOptions and metadata.
+
+    Error handling:
+        - 400 for geocoding failure
+        - 502 for weather provider failure
+    """
+    try:
+        lat, lon, _ = await nominatim_client.geocode_first(payload.location)
+        snapshot = await openmeteo_client.get_current(lat, lon)
+        forecast = await openmeteo_client.get_forecast(lat, lon, hours=payload.hours, step_hours=payload.step_hours)
+    except GeoError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Geocoding failed: {e}") from e
+    except WeatherProviderError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e)) from e
+
+    windows = build_time_windows_for_day(payload.target_date, window_hours=payload.window_hours, step_hours=payload.step_hours)
+    options = score_windows_from_forecast(windows, forecast, snapshot=snapshot)
+    notes = (
+        "Score computed using temperature comfort band (18-26°C), precipitation amount and probability penalties, "
+        "wind penalty, and small condition adjustment. Scores normalized to 0..1."
+    )
+    return ScoreResponse(options=options, generated_at=datetime.utcnow(), notes=notes)
+
+
+@router.post(
+    "/recommendations",
+    response_model=RecommendationResponse,
+    summary="Generate recommendations for an ad-hoc event",
+    description=(
+        "Generates ranked time-window recommendations for a new event using live geocoding and forecast. "
+        "This does not persist the event; use POST /api/events to create records."
+    ),
+    operation_id="post_event_recommendations",
+)
+async def post_recommendations(payload: RecommendationRequest) -> RecommendationResponse:
+    """
+    PUBLIC_INTERFACE
+    Generate weather-aware recommendations for a new event request.
+
+    Parameters:
+        payload: RecommendationRequest with event and scoring parameters.
+
+    Returns:
+        RecommendationResponse with ranked ScoredOptions.
+    """
+    try:
+        lat, lon, _ = await nominatim_client.geocode_first(payload.location)
+        snapshot = await openmeteo_client.get_current(lat, lon)
+        # Forecast window from now through hours ahead should cover the target date windows near-term.
+        forecast = await openmeteo_client.get_forecast(lat, lon, hours=payload.hours, step_hours=payload.step_hours)
+    except GeoError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Geocoding failed: {e}") from e
+    except WeatherProviderError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e)) from e
+
+    windows = build_time_windows_for_day(payload.date, window_hours=payload.window_hours, step_hours=payload.step_hours)
+    options = score_windows_from_forecast(windows, forecast, snapshot=snapshot)
+
+    return RecommendationResponse(
+        event_id="ad-hoc",
+        options=options,
+        generated_at=datetime.utcnow(),
+        notes="Recommendations generated via suitability scoring. Not persisted.",
     )
