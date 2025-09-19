@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 
 from src.schemas.models import EventRequest, EventResponse
 import logging
+from src.services.notifications import EmailMessage, get_email_service
 
 
 class InMemoryEventsRepository:
@@ -23,9 +24,14 @@ class InMemoryEventsRepository:
     def _send_email_stub(self, to_email: str, subject: str, body: str) -> None:
         """
         PUBLIC_INTERFACE
-        Stub for email sending which just logs the intent.
+        Provider-agnostic email trigger using the configured EmailService (console by default).
         """
-        self._logger.info("[EMAIL_STUB] To=%s | Subject=%s | Body=%s", to_email, subject, body)
+        try:
+            service = get_email_service()
+            service.send(EmailMessage(to=to_email, subject=subject, body=body))
+        except Exception as exc:
+            # Fail-safe: log but do not break the main flow
+            self._logger.warning("Email stub failed: %s", exc)
 
     def add(self, payload: EventRequest) -> EventResponse:
         """Create and store a new EventResponse from the request."""

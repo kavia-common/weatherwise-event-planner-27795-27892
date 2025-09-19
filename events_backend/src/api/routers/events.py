@@ -17,6 +17,7 @@ from src.schemas.models import (
 )
 from src.services.scoring import build_time_windows_for_day, score_windows_from_forecast
 from src.services.weather_client import GeoError, WeatherProviderError, nominatim_client, openmeteo_client
+from src.services.notifications import get_email_service, EmailMessage
 
 router = APIRouter()
 
@@ -122,12 +123,28 @@ def get_recommendations(
         ScoredOption(label="Afternoon window", score=0.66),
         ScoredOption(label="Evening window", score=0.52),
     ]
-    return RecommendationResponse(
+    response = RecommendationResponse(
         event_id=event.id,
         options=options,
         generated_at=datetime.utcnow(),
         notes="Scores are illustrative placeholders. Real scoring to be integrated.",
     )
+
+    # Notify user (stub) that recommendations were generated
+    try:
+        email_service = get_email_service()
+        best = options[0] if options else None
+        subject = f"Recommendations ready for '{event.name}'"
+        best_str = f" Top option: {best.label} (score {best.score:.2f})." if best else ""
+        body = (
+            f"We generated recommendations for your event on {event.date.isoformat()} at {event.location}."
+            f"{best_str}"
+        )
+        email_service.send(EmailMessage(to=event.email, subject=subject, body=body))
+    except Exception as exc:
+        logging.getLogger("events.notifications").warning("Recommendation email stub failed: %s", exc)
+
+    return response
 
 
 @router.post(
@@ -207,9 +224,25 @@ async def post_recommendations(payload: RecommendationRequest) -> Recommendation
     windows = build_time_windows_for_day(payload.date, window_hours=payload.window_hours, step_hours=payload.step_hours)
     options = score_windows_from_forecast(windows, forecast, snapshot=snapshot)
 
-    return RecommendationResponse(
+    response = RecommendationResponse(
         event_id="ad-hoc",
         options=options,
         generated_at=datetime.utcnow(),
         notes="Recommendations generated via suitability scoring. Not persisted.",
     )
+
+    # Notify requester (stub) about recommendations
+    try:
+        email_service = get_email_service()
+        best = options[0] if options else None
+        subject = f"Your weather-aware recommendations for '{payload.name}'"
+        best_str = f" Best option: {best.label} (score {best.score:.2f})." if best else ""
+        body = (
+            f"We prepared recommendations for {payload.date.isoformat()} at {payload.location}."
+            f"{best_str}"
+        )
+        email_service.send(EmailMessage(to=payload.email, subject=subject, body=body))
+    except Exception as exc:
+        logging.getLogger("events.notifications").warning("Ad-hoc recommendation email stub failed: %s", exc)
+
+    return response

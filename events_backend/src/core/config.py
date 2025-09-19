@@ -16,6 +16,10 @@ class Settings(BaseModel):
     Note:
     - Do not hardcode secrets. Use an .env file to populate these values.
     - See .env.example for required variables.
+
+    Email/notifications:
+    - EMAIL_SENDER: optional default 'from' address for outbound emails
+    - EMAIL_SMTP_URL: optional SMTP URL should a real SMTP email service be plugged later
     """
     ENV: str = Field(default=os.getenv("ENV", "development"), description="Runtime environment")
     DEBUG: bool = Field(default=os.getenv("DEBUG", "false").lower() == "true", description="Debug mode")
