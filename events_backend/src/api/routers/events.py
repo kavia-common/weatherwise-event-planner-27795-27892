@@ -1,10 +1,11 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, HTTPException, Path, status, Query
 
 from src.api.deps import get_events_repo
 from src.data.events_repository import InMemoryEventsRepository
+import logging
 from src.schemas.models import (
     EventRequest,
     EventResponse,
@@ -19,13 +20,19 @@ from src.services.weather_client import GeoError, WeatherProviderError, nominati
 
 router = APIRouter()
 
+# Ensure basic logging is configured for email stub visibility (safe if configured elsewhere)
+logging.basicConfig(level=logging.INFO)
+
 
 @router.post(
     "",
     response_model=EventResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create event",
-    description="Create an event plan request. Stores the event in an in-memory repository for now.",
+    description=(
+        "Create an event plan request. Stores the event in an in-memory repository for now. "
+        "On success, triggers email notification stubs that log to the console."
+    ),
     operation_id="create_event",
 )
 def create_event(payload: EventRequest, repo: InMemoryEventsRepository = Depends(get_events_repo)) -> EventResponse:
@@ -34,10 +41,13 @@ def create_event(payload: EventRequest, repo: InMemoryEventsRepository = Depends
     Create a new event.
 
     Parameters:
-        payload: EventRequest body with event details.
+        payload: EventRequest body with event details (supports optional user_id and notes).
 
     Returns:
         EventResponse representing the created event record.
+
+    Side effects:
+        Logs 'email' notifications to console via stub hooks.
     """
     return repo.add(payload)
 
@@ -46,14 +56,20 @@ def create_event(payload: EventRequest, repo: InMemoryEventsRepository = Depends
     "",
     response_model=List[EventResponse],
     summary="List events",
-    description="List all events stored in the repository.",
+    description="List events stored in the repository. Optionally filter by userId.",
     operation_id="list_events",
 )
-def list_events(repo: InMemoryEventsRepository = Depends(get_events_repo)) -> List[EventResponse]:
+def list_events(
+    userId: Optional[str] = Query(default=None, description="Filter events by associated user ID"),
+    repo: InMemoryEventsRepository = Depends(get_events_repo),
+) -> List[EventResponse]:
     """
     PUBLIC_INTERFACE
-    List all events currently in the in-memory store.
+    List events currently in the in-memory store. If userId is provided,
+    only events associated with that user are returned.
     """
+    if userId:
+        return repo.list_by_user(userId)
     return repo.list()
 
 
@@ -61,7 +77,7 @@ def list_events(repo: InMemoryEventsRepository = Depends(get_events_repo)) -> Li
     "/{event_id}",
     response_model=EventResponse,
     summary="Get event",
-    description="Retrieve a single event by ID.",
+    description="Retrieve a single event by ID. Returns 404 if not found.",
     operation_id="get_event",
 )
 def get_event(

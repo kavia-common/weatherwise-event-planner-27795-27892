@@ -51,6 +51,8 @@ class EventRequest(BaseModel):
         default=None,
         description="Optional list of preferences (e.g., 'outdoor', 'shade', 'low-wind')",
     )
+    user_id: Optional[str] = Field(None, description="Optional user identifier to associate this event with a user")
+    notes: Optional[str] = Field(None, description="Optional notes or special requests for the event")
 
 
 class EventResponse(BaseModel):
@@ -67,6 +69,8 @@ class EventResponse(BaseModel):
     status: str = Field(..., description="Event status (e.g., 'received', 'scheduled')")
     weather_snapshot: Optional[WeatherSnapshot] = Field(None, description="Current weather at location")
     forecast: Optional[List[ForecastItem]] = Field(None, description="Forecast around event date")
+    user_id: Optional[str] = Field(None, description="User identifier associated to this event, if provided")
+    notes: Optional[str] = Field(None, description="Optional notes or special requests for the event")
 
 
 class RecommendationResponse(BaseModel):
