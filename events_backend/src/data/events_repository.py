@@ -41,7 +41,7 @@ class InMemoryEventsRepository:
             id=event_id,
             name=payload.name,
             email=payload.email,
-            date=payload.date,
+            event_date=payload.event_date,
             location=payload.location,
             created_at=now,
             status="received",
@@ -56,12 +56,12 @@ class InMemoryEventsRepository:
         self._send_email_stub(
             to_email=event.email,
             subject="Event received",
-            body=f"Your event '{event.name}' scheduled for {event.date.isoformat()} at {event.location} has been received.",
+            body=f"Your event '{event.name}' scheduled for {event.event_date.isoformat()} at {event.location} has been received.",
         )
         self._send_email_stub(
             to_email="ops@example.com",
             subject="New event submission",
-            body=f"New event submitted: {event.id} - {event.name} ({event.email}) on {event.date.isoformat()} @ {event.location}",
+            body=f"New event submitted: {event.id} - {event.name} ({event.email}) on {event.event_date.isoformat()} @ {event.location}",
         )
 
         return event

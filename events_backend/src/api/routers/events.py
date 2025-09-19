@@ -137,7 +137,7 @@ def get_recommendations(
         subject = f"Recommendations ready for '{event.name}'"
         best_str = f" Top option: {best.label} (score {best.score:.2f})." if best else ""
         body = (
-            f"We generated recommendations for your event on {event.date.isoformat()} at {event.location}."
+            f"We generated recommendations for your event on {event.event_date.isoformat()} at {event.location}."
             f"{best_str}"
         )
         email_service.send(EmailMessage(to=event.email, subject=subject, body=body))
@@ -221,7 +221,7 @@ async def post_recommendations(payload: RecommendationRequest) -> Recommendation
     except WeatherProviderError as e:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e)) from e
 
-    windows = build_time_windows_for_day(payload.date, window_hours=payload.window_hours, step_hours=payload.step_hours)
+    windows = build_time_windows_for_day(payload.event_date, window_hours=payload.window_hours, step_hours=payload.step_hours)
     options = score_windows_from_forecast(windows, forecast, snapshot=snapshot)
 
     response = RecommendationResponse(
@@ -238,7 +238,7 @@ async def post_recommendations(payload: RecommendationRequest) -> Recommendation
         subject = f"Your weather-aware recommendations for '{payload.name}'"
         best_str = f" Best option: {best.label} (score {best.score:.2f})." if best else ""
         body = (
-            f"We prepared recommendations for {payload.date.isoformat()} at {payload.location}."
+            f"We prepared recommendations for {payload.event_date.isoformat()} at {payload.location}."
             f"{best_str}"
         )
         email_service.send(EmailMessage(to=payload.email, subject=subject, body=body))

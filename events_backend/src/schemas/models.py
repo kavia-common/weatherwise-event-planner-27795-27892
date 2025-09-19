@@ -42,9 +42,13 @@ class EventRequest(BaseModel):
     PUBLIC_INTERFACE
     Request payload to create or evaluate an event plan.
     """
+    # Allow population by both field name and alias across all models in this module
+    model_config = {"populate_by_name": True}
+
     name: str = Field(..., description="Event name")
     email: EmailStr = Field(..., description="Requester email")
-    date: date = Field(..., description="Target event date")
+    # Avoid name/type clash: internal name event_date, external alias 'date'
+    event_date: date = Field(..., alias="date", description="Target event date")
     location: str = Field(..., description="Location or city for the event")
     flexibility_days: int = Field(0, ge=0, le=30, description="Flexibility window in days around the target date")
     preferences: Optional[List[str]] = Field(
@@ -60,10 +64,13 @@ class EventResponse(BaseModel):
     PUBLIC_INTERFACE
     Response body after creating or evaluating an event.
     """
+    model_config = {"populate_by_name": True}
+
     id: str = Field(..., description="Event identifier")
     name: str = Field(..., description="Event name")
     email: EmailStr = Field(..., description="Requester email")
-    date: date = Field(..., description="Target event date")
+    # Avoid name/type clash; alias keeps API stable
+    event_date: date = Field(..., alias="date", description="Target event date")
     location: str = Field(..., description="Location or city for the event")
     created_at: datetime = Field(..., description="Creation timestamp")
     status: str = Field(..., description="Event status (e.g., 'received', 'scheduled')")
@@ -113,9 +120,12 @@ class RecommendationRequest(BaseModel):
     PUBLIC_INTERFACE
     Request body to generate recommendations for a new ad-hoc event.
     """
+    model_config = {"populate_by_name": True}
+
     name: str = Field(..., description="Event name")
     email: EmailStr = Field(..., description="Requester email")
-    date: date = Field(..., description="Preferred date")
+    # Avoid name/type clash; expose as 'date'
+    event_date: date = Field(..., alias="date", description="Preferred date")
     location: str = Field(..., description="Location or city for the event")
     hours: int = Field(48, ge=1, le=168, description="Forecast horizon in hours")
     step_hours: int = Field(3, ge=1, le=24, description="Forecast sampling step in hours")
