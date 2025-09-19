@@ -32,12 +32,16 @@ pip install -r requirements.txt
 
 ### 4. Run the server (development)
 ```
-uvicorn src.api.main:app --reload --port 8000
+# Recommended (respects HOST and PORT from .env; defaults to 0.0.0.0:3001)
+python -m src.api.run
+
+# Alternatively specify explicitly:
+uvicorn src.api.main:app --reload --host 0.0.0.0 --port 3001
 ```
-The API will be available at http://localhost:8000
+The API will be available at http://localhost:3001 by default (unless PORT is overridden).
 
 ## Available Commands
-- Run dev server: `uvicorn src.api.main:app --reload --port 8000`
+- Run dev server: `python -m src.api.run` (uses HOST/PORT from .env; defaults to 0.0.0.0:3001)
 - Run tests (if any added): `pytest`
 - Lint (flake8): `flake8`
 

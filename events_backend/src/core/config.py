@@ -24,6 +24,10 @@ class Settings(BaseModel):
     ENV: str = Field(default=os.getenv("ENV", "development"), description="Runtime environment")
     DEBUG: bool = Field(default=os.getenv("DEBUG", "false").lower() == "true", description="Debug mode")
 
+    # Network
+    HOST: str = Field(default=os.getenv("HOST", "0.0.0.0"), description="Host address to bind the server")
+    PORT: int = Field(default=int(os.getenv("PORT", "3001")), description="Port to bind the server")
+
     # CORS
     CORS_ALLOW_ORIGINS: List[str] = Field(
         default_factory=lambda: os.getenv("CORS_ALLOW_ORIGINS", "*").split(","),
